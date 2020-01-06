@@ -38,6 +38,7 @@ if __name__ == '__main__':
         epsHistory.append(brain.EPSILON)
         done = False
         observation = env.reset()
+        brain.getEpsilon(i)
         frames = [np.sum(observation[15:200,30:125], axis=2)]
         score = 0
         lastAction = 0

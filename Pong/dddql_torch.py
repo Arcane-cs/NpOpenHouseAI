@@ -63,6 +63,11 @@ class Agent(object):
         self.steps += 1
         return action
 
+    def getEpsilon(self, episode):
+        if episode > 5:
+            self.epsilon = max(0, min(0.9, 1.0 - math.log10((episode+1)/10)))
+
+
     def learn(self, batch_size):
         #set gradient to zero for backpropagation
         self.Q_eval.optimizer.zero_grad()
@@ -85,9 +90,6 @@ class Agent(object):
         Qtarget = Qpred
         indices = np.arange(batch_size)
         Qtarget[indices,maxA] = rewards + self.GAMMA*T.max(Qnext[1])
-
-        if self.memCntr > 5:
-            self.epsilon = max(0, min(0.9, 1.0 - math.log10((self.memCntr+1)/10)))
 
         #get the loss with MSE and backpropagate it
         loss = self.Q_eval.loss(Qtarget, Qpred).to(self.Q_eval.device)
