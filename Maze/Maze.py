@@ -5,8 +5,22 @@ from time import time
 import numpy as np
 import sys
 import math
+def __draw_portals(self, transparency=160):
 
-env = gym.make("maze-random-100x100-v0")
+    if self.__enable_render is False:
+        return
+        
+    colour_range = np.linspace(0, 255, len(self.maze.portals), dtype=int)
+    colour_i = 0
+    for portal in self.maze.portals:
+        colour = ((100 - colour_range[colour_i])% 255, colour_range[colour_i], 0)
+        colour_i += 40
+        for location in portal.locations:
+            self.__colour_cell(location, colour=colour, transparency=transparency)
+
+gym_maze.__draw_portals = __draw_portals
+
+env = gym.make("maze-random-30x30-plus-v0")
 env.reset()
 
 MAZE_SIZE = tuple((env.observation_space.high + np.ones(env.observation_space.shape)).astype(int))
