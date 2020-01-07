@@ -65,7 +65,7 @@ class Agent(object):
 
     def getEpsilon(self, episode):
         if episode > 5:
-            self.epsilon = max(0, min(0.9, 1.0 - math.log10((episode+1)/10)))
+            self.EPSILON = max(0, min(0.9, 1.0 - math.log10((episode+1)/10)))
 
 
     def learn(self, batch_size):
