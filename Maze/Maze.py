@@ -5,21 +5,35 @@ from time import time
 import numpy as np
 import sys
 import math
+
+## program options
+MIN_LEARNING_RATE = 0.1
+MIN_EPSILON = 0
+DISCOUNT = 0.95
+EPISODES = 50000
+STREAK_TO_END = 100
+ENABLE_RECORDING = True
+
+## environment rendering
+# maze portal render function
 def __draw_portals(self, transparency=160):
 
     if self.__enable_render is False:
         return
-        
+
     colour_range = np.linspace(0, 255, len(self.maze.portals), dtype=int)
     colour_i = 0
     for portal in self.maze.portals:
         colour = ((100 - colour_range[colour_i])% 255, colour_range[colour_i], 0)
         colour_i += 40
         for location in portal.locations:
+            ## TODO: use pygame to draw an portal
             self.__colour_cell(location, colour=colour, transparency=transparency)
 
 gym_maze.__draw_portals = __draw_portals
 
+
+## setup env for q learning
 env = gym.make("maze-random-30x30-plus-v0")
 env.reset()
 
@@ -27,20 +41,16 @@ MAZE_SIZE = tuple((env.observation_space.high + np.ones(env.observation_space.sh
 NUM_BUCKETS = MAZE_SIZE
 STATE_BOUNDS = list(zip(env.observation_space.low, env.observation_space.high))
 
-MIN_LEARNING_RATE = 0.1
-MIN_EPSILON = 0
 DECAY_FACTOR = np.prod(MAZE_SIZE, dtype=float) / 10.0
-DISCOUNT = 0.95
-EPISODES = 50000
 SOLVED_T = np.prod(MAZE_SIZE, dtype=float)
 MAX_T = np.prod(MAZE_SIZE, dtype=int) * 10
-STREAK_TO_END = 100
 
 q_table = np.zeros(NUM_BUCKETS + (env.action_space.n,), dtype=float)
 
+
+## q learning utils
 def get_epsilon(t):
     return max(MIN_EPSILON, min(0.8, 1.0 - math.log10((t+1)/DECAY_FACTOR)))
-
 
 def get_learning_rate(t):
     return max(MIN_LEARNING_RATE, min(0.8, 1.0 - math.log10((t+1)/DECAY_FACTOR)))
@@ -61,9 +71,8 @@ def state_to_bucket(state):
         bucket_indice.append(bucket_index)
     return tuple(bucket_indice)
 
+## recording
 recording_folder = f"tmp/maze_{MAZE_SIZE}_{time()}"
-
-ENABLE_RECORDING = True
 
 if ENABLE_RECORDING:
     env = wrappers.Monitor(env, recording_folder, video_callable=lambda episode_id: True, force=True)
@@ -72,6 +81,7 @@ num_streaks = 0
 
 env.render()
 
+## perform q learning to learn to solve mazes
 for episode in range(EPISODES):
 
     state = state_to_bucket(env.reset())
@@ -114,7 +124,6 @@ for episode in range(EPISODES):
             print(f"Episode {episode} timed out at {t} with total reward = {episode_reward}.")
             break
 
-    if num_streaks > STREAK_TO_END:
-            break
-    
-
+        # early stopping: solved streaks
+        if num_streaks > STREAK_TO_END:
+                break
