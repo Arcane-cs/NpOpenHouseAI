@@ -9,8 +9,9 @@ The demos showcase applying reinforcement learning (Q-Learning) to train a agent
 
 | Demo | Description | Run |
 | --- | --- | --- |
-| Maze | Agent trained using Q-learning to navigate a maze | `python Maze/Maze.py`
+| Maze | Agent trained using Q-learning to navigate a maze | `python Maze/Maze.py` |
 | Space Invaders | Agent trained using Q-Learning play space invaders | `python Space\ Invaders/Spaceinvaders.py` |
+| Pong | Agent trained using Q-learning to play pong | `python Pong/Pong.py` |
 
 ## Setup
 ### Bare Metal
