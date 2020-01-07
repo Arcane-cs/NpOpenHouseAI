@@ -5,7 +5,37 @@ import numpy as np
 import os
 
 PKG_DIR  = os.path.dirname(os.path.abspath(__file__))
-PORTAL_SPRITES_DIR = os.path.join(PKG_DIR, "assets", "portal")
+ASSETS_DIR = os.path.join(PKG_DIR, "assets")
+
+# ripped from www.pygame.org/pcr/transform_scale/
+def aspect_scale(img, box):
+    """ Scales 'img' to fit into box bx/by.
+     This method will retain the original image's aspect ratio """
+    bx, by = box
+    ix,iy = img.get_size()
+    if ix > iy:
+        # fit to width
+        scale_factor = bx/float(ix)
+        sy = scale_factor * iy
+        if sy > by:
+            scale_factor = by/float(iy)
+            sx = scale_factor * ix
+            sy = by
+        else:
+            sx = bx
+    else:
+        # fit to height
+        scale_factor = by/float(iy)
+        sx = scale_factor * ix
+        if sx > bx:
+            scale_factor = bx/float(ix)
+            sx = bx
+            sy = scale_factor * iy
+        else:
+            sy = by
+    new_scale = (int(sx), int(sy))
+
+    return pygame.transform.scale(img, new_scale)
 
 class MazeView2D:
 
@@ -50,21 +80,32 @@ class MazeView2D:
         self.__robot = self.entrance
 
         # load sprites
+        cell_scale = (int(self.CELL_W), int(self.CELL_H))
         # load portal sprites
-        self.portal_sprites = [ pygame.image.load(os.path.join(PORTAL_SPRITES_DIR, p))
-                               for p in os.listdir(PORTAL_SPRITES_DIR) ]
-        portal_scale = (int(self.CELL_W), int(self.CELL_H))
-        self.portal_sprites = [ pygame.transform.scale(s, portal_scale)
+        portals_dir = os.path.join(ASSETS_DIR, "portal")
+        self.portal_sprites = [ pygame.image.load(os.path.join(portals_dir, p))
+                               for p in os.listdir(portals_dir) ]
+        cell_scale = (int(self.CELL_W), int(self.CELL_H))
+        self.portal_sprites = [ aspect_scale(s, cell_scale)
                                for s in self.portal_sprites ]
+        # load bot sprite
+        bot_path = os.path.join(ASSETS_DIR, "bot.png")
+        self.bot_sprite = aspect_scale(pygame.image.load(bot_path), cell_scale)
+        # load goal sprite
+        goal_path = os.path.join(ASSETS_DIR, "goal.png")
+        self.goal_sprite = aspect_scale(pygame.image.load(goal_path), cell_scale)
 
+        self.background = pygame.Surface(self.screen.get_size()).convert()
+        self.maze_layer = pygame.Surface(self.screen.get_size()).convert_alpha()
+        self.render_all()
+
+    def render_all(self):
         # render maze
         if self.__enable_render is True:
             # Create a background
-            self.background = pygame.Surface(self.screen.get_size()).convert()
-            self.background.fill((255, 255, 255))
+            self.background.fill((255, 241, 217))
 
             # Create a layer for the maze
-            self.maze_layer = pygame.Surface(self.screen.get_size()).convert_alpha()
             self.maze_layer.fill((0, 0, 0, 0,))
 
             # show the maze
@@ -76,12 +117,8 @@ class MazeView2D:
             # show the robot
             self.__draw_robot()
 
-            # show the entrance
-            self.__draw_entrance()
-
             # show the goal
             self.__draw_goal()
-
 
     def update(self, mode="human"):
         try:
@@ -121,7 +158,6 @@ class MazeView2D:
             self.__draw_robot(transparency=255)
 
     def reset_robot(self):
-
         self.__draw_robot(transparency=0)
         self.__robot = np.zeros(2, dtype=int)
         self.__draw_robot(transparency=255)
@@ -135,12 +171,7 @@ class MazeView2D:
 
     def __view_update(self, mode="human"):
         if not self.__game_over:
-            # update the robot's position
-            self.__draw_entrance()
-            self.__draw_goal()
-            self.__draw_portals()
-            self.__draw_robot()
-
+            self.render_all()
 
             # update the screen
             self.screen.blit(self.background, (0, 0))
@@ -152,21 +183,21 @@ class MazeView2D:
             return np.flipud(np.rot90(pygame.surfarray.array3d(pygame.display.get_surface())))
 
     def __draw_maze(self):
-        
         if self.__enable_render is False:
             return
-        
-        line_colour = (0, 0, 0, 255)
+
+        line_colour = (240, 72, 51, 255)
+        line_width = 16
 
         # drawing the horizontal lines
         for y in range(self.maze.MAZE_H + 1):
             pygame.draw.line(self.maze_layer, line_colour, (0, y * self.CELL_H),
-                             (self.SCREEN_W, y * self.CELL_H))
+                             (self.SCREEN_W, y * self.CELL_H), width=line_width)
 
         # drawing the vertical lines
         for x in range(self.maze.MAZE_W + 1):
             pygame.draw.line(self.maze_layer, line_colour, (x * self.CELL_W, 0),
-                             (x * self.CELL_W, self.SCREEN_H))
+                             (x * self.CELL_W, self.SCREEN_H), width=line_width)
 
         # breaking the walls
         for x in range(len(self.maze.maze_cells)):
@@ -177,13 +208,12 @@ class MazeView2D:
                 for dir, open in walls_status.items():
                     if open:
                         dirs += dir
-                self.__cover_walls(x, y, dirs)
+                self.__cover_walls(x, y, dirs, width=line_width)
 
-    def __cover_walls(self, x, y, dirs, colour=(0, 0, 255, 15)):
-
+    def __cover_walls(self, x, y, dirs, colour=(255, 241, 217), width=2):
         if self.__enable_render is False:
             return
-        
+
         dx = x * self.CELL_W
         dy = y * self.CELL_H
 
@@ -192,63 +222,65 @@ class MazeView2D:
 
         for dir in dirs:
             if dir == "S":
-                line_head = (dx + 1, dy + self.CELL_H)
-                line_tail = (dx + self.CELL_W - 1, dy + self.CELL_H)
+                line_head = (dx + width /2, dy + self.CELL_H)
+                line_tail = (dx + self.CELL_W - width /2, dy + self.CELL_H)
             elif dir == "N":
-                line_head = (dx + 1, dy)
-                line_tail = (dx + self.CELL_W - 1, dy)
+                line_head = (dx + width/2, dy)
+                line_tail = (dx + self.CELL_W - width/2, dy)
             elif dir == "W":
-                line_head = (dx, dy + 1)
-                line_tail = (dx, dy + self.CELL_H - 1)
+                line_head = (dx, dy + width/2)
+                line_tail = (dx, dy + self.CELL_H - width/2)
             elif dir == "E":
-                line_head = (dx + self.CELL_W, dy + 1)
-                line_tail = (dx + self.CELL_W, dy + self.CELL_H - 1)
+                line_head = (dx + self.CELL_W, dy + width/2)
+                line_tail = (dx + self.CELL_W, dy + self.CELL_H - width/2)
             else:
                 raise ValueError("The only valid directions are (N, S, E, W).")
 
-            pygame.draw.line(self.maze_layer, colour, line_head, line_tail)
+            pygame.draw.line(self.maze_layer, colour, line_head, line_tail, width)
 
     def __draw_robot(self, colour=(0, 0, 150), transparency=255):
 
         if self.__enable_render is False:
             return
 
-        x = int(self.__robot[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5)
-        y = int(self.__robot[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5)
-        r = int(min(self.CELL_W, self.CELL_H)/5 + 0.5)
+        x = int(self.__robot[0] * self.CELL_W + 0.5)
+        y = int(self.__robot[1] * self.CELL_H + 0.5)
 
-        pygame.draw.circle(self.maze_layer, colour + (transparency,), (x, y), r)
+        draw_rect = self.bot_sprite.get_rect().move(x, y)
+        self.maze_layer.blit(self.bot_sprite, draw_rect)
 
     def __draw_entrance(self, colour=(0, 0, 150), transparency=235):
 
         self.__colour_cell(self.entrance, colour=colour, transparency=transparency)
 
     def __draw_goal(self, colour=(150, 0, 0), transparency=235):
+        x = int(self.goal[0] * self.CELL_W + 0.5 + 1)
+        y = int(self.goal[1] * self.CELL_H + 0.5 + 1)
 
-        self.__colour_cell(self.goal, colour=colour, transparency=transparency)
+        draw_rect = self.goal_sprite.get_rect().move(x, y)
+        self.maze_layer.blit(self.goal_sprite, draw_rect)
 
     def __draw_portals(self, interval=0.2):
         if self.__enable_render is False:
             return
 
-        # enforce interval between redraws
+        # enforce interval before drawing next frame
         self.portal_last_drawn = getattr(self, "portal_last_drawn", 0)
-        if (time.time() - self.portal_last_drawn) < interval:
-            return
-
-        # determine sprite to draw
-        self.last_sprite_idx = getattr(self, "last_sprite_idx", -1)
-        sprite_idx = (self.last_sprite_idx + 1) % len(self.portal_sprites)
-        sprite = self.portal_sprites[sprite_idx]
+        if (time.time() - self.portal_last_drawn) >= interval:
+            print("HERE")
+            self.last_sprite_idx = getattr(self, "last_sprite_idx", -1)
+            sprite_idx = (self.last_sprite_idx + 1) % len(self.portal_sprites)
+            # update timestamps/markers 
+            self.portal_last_drawn = time.time()
+            self.last_sprite_idx = sprite_idx
+        else:
+            sprite_idx = self.last_sprite_idx
 
         # draw portals with sprite
+        sprite = self.portal_sprites[sprite_idx]
         for portal in self.maze.portals:
             for location in portal.locations:
                 self.__draw_cell(location, sprite)
-
-        # update timestamps/markers 
-        self.portal_last_drawn = time.time()
-        self.last_sprite_idx = sprite_idx
 
     # draws sprite at the given cell
     def __draw_cell(self, cell, sprite):

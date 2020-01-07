@@ -8,7 +8,8 @@ setup(name="gym_maze",
       packages=["gym_maze", "gym_maze.envs"],
       package_data = {
           "gym_maze.envs": ["maze_samples/*.npy",
-                            "assets/portal/*.png"]
+                            "assets/portal/*.png",
+                            "assets/*.png"]
       },
       install_requires = ["gym", "pygame", "numpy"]
 )
