@@ -1,8 +1,11 @@
+import time
 import pygame
 import random
 import numpy as np
 import os
 
+PKG_DIR  = os.path.dirname(os.path.abspath(__file__))
+PORTAL_SPRITES_DIR = os.path.join(PKG_DIR, "assets", "portal")
 
 class MazeView2D:
 
@@ -16,6 +19,7 @@ class MazeView2D:
         self.clock = pygame.time.Clock()
         self.__game_over = False
         self.__enable_render = enable_render
+
 
         # Load a maze
         if maze_file_path is None:
@@ -45,6 +49,15 @@ class MazeView2D:
         # Create the Robot
         self.__robot = self.entrance
 
+        # load sprites
+        # load portal sprites
+        self.portal_sprites = [ pygame.image.load(os.path.join(PORTAL_SPRITES_DIR, p))
+                               for p in os.listdir(PORTAL_SPRITES_DIR) ]
+        portal_scale = (int(self.CELL_W), int(self.CELL_H))
+        self.portal_sprites = [ pygame.transform.scale(s, portal_scale)
+                               for s in self.portal_sprites ]
+
+        # render maze
         if self.__enable_render is True:
             # Create a background
             self.background = pygame.Surface(self.screen.get_size()).convert()
@@ -68,6 +81,7 @@ class MazeView2D:
 
             # show the goal
             self.__draw_goal()
+
 
     def update(self, mode="human"):
         try:
@@ -198,7 +212,7 @@ class MazeView2D:
 
         if self.__enable_render is False:
             return
-        
+
         x = int(self.__robot[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5)
         y = int(self.__robot[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5)
         r = int(min(self.CELL_W, self.CELL_H)/5 + 0.5)
@@ -213,18 +227,40 @@ class MazeView2D:
 
         self.__colour_cell(self.goal, colour=colour, transparency=transparency)
 
-    def __draw_portals(self, transparency=160):
-
+    def __draw_portals(self, interval=0.2):
         if self.__enable_render is False:
             return
-        
-        colour_range = np.linspace(0, 255, len(self.maze.portals), dtype=int)
-        colour_i = 0
+
+        # enforce interval between redraws
+        self.portal_last_drawn = getattr(self, "portal_last_drawn", 0)
+        if (time.time() - self.portal_last_drawn) < interval:
+            return
+
+        # determine sprite to draw
+        self.last_sprite_idx = getattr(self, "last_sprite_idx", -1)
+        sprite_idx = (self.last_sprite_idx + 1) % len(self.portal_sprites)
+        sprite = self.portal_sprites[sprite_idx]
+
+        # draw portals with sprite
         for portal in self.maze.portals:
-            colour = ((100 - colour_range[colour_i])% 255, colour_range[colour_i], 0)
-            colour_i += 1
             for location in portal.locations:
-                self.__colour_cell(location, colour=colour, transparency=transparency)
+                self.__draw_cell(location, sprite)
+
+        # update timestamps/markers 
+        self.portal_last_drawn = time.time()
+        self.last_sprite_idx = sprite_idx
+
+    # draws sprite at the given cell
+    def __draw_cell(self, cell, sprite):
+        # calculate portal sprite
+        x = int(cell[0] * self.CELL_W + 0.5 + 1)
+        y = int(cell[1] * self.CELL_H + 0.5 + 1)
+        w = int(self.CELL_W + 0.5 - 1)
+        h = int(self.CELL_H + 0.5 - 1)
+
+        # draw portal sprite 
+        draw_rect = pygame.Rect((x, y, w, h))
+        self.maze_layer.blit(sprite, draw_rect)
 
     def __colour_cell(self, cell, colour, transparency):
 
@@ -566,9 +602,8 @@ class Portal:
 
 
 if __name__ == "__main__":
-
-    maze = MazeView2D(screen_size= (500, 500), maze_size=(10,10))
-    maze.update()
-    input("Enter any key to quit.")
-
-
+    from time import sleep
+    maze = MazeView2D(screen_size= (500, 500), maze_size=(10,10), num_portals=10)
+    while True:
+        maze.update()
+        sleep(1e-3)
