@@ -127,4 +127,4 @@ for episode in range(EPISODES):
 
         # early stopping: solved streaks
         if num_streaks > STREAK_TO_END:
-            sys.exit()f
+            sys.exit()
