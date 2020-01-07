@@ -34,7 +34,7 @@ gym_maze.__draw_portals = __draw_portals
 
 
 ## setup env for q learning
-env = gym.make("maze-random-30x30-plus-v0")
+env = gym.make("maze-random-10x10-plus-v0")
 env.reset()
 
 MAZE_SIZE = tuple((env.observation_space.high + np.ones(env.observation_space.shape)).astype(int))
@@ -43,7 +43,7 @@ STATE_BOUNDS = list(zip(env.observation_space.low, env.observation_space.high))
 
 DECAY_FACTOR = np.prod(MAZE_SIZE, dtype=float) / 10.0
 SOLVED_T = np.prod(MAZE_SIZE, dtype=float)
-MAX_T = np.prod(MAZE_SIZE, dtype=int) * 10
+MAX_T = np.prod(MAZE_SIZE, dtype=int) * 20
 
 q_table = np.zeros(NUM_BUCKETS + (env.action_space.n,), dtype=float)
 
@@ -90,10 +90,11 @@ for episode in range(EPISODES):
     epsilon = get_epsilon(episode)
     done = False
     for t in range(MAX_T):
-
         if np.random.random() > epsilon:
+            print("[explore]", end="")
             action = int(np.argmax(q_table[state]))
         else:
+            print("[exploit]", end="")
             action = env.action_space.sample()
         if not done:
             new_state, reward, done, _ = env.step(action)
@@ -110,6 +111,8 @@ for episode in range(EPISODES):
 
             env.render()
 
+        print(f"t: {t} action: {action} reward: {reward} lr: {learning_rate} epsilon: {epsilon}")
+
         if env.is_game_over():
             sys.exit()
         if done:
@@ -120,10 +123,8 @@ for episode in range(EPISODES):
             else:
                 num_streaks = 0
             break
-        elif t >= MAX_T:
-            print(f"Episode {episode} timed out at {t} with total reward = {episode_reward}.")
             break
 
         # early stopping: solved streaks
         if num_streaks > STREAK_TO_END:
-                break
+            sys.exit()f
