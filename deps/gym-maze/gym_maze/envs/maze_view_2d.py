@@ -267,7 +267,6 @@ class MazeView2D:
         # enforce interval before drawing next frame
         self.portal_last_drawn = getattr(self, "portal_last_drawn", 0)
         if (time.time() - self.portal_last_drawn) >= interval:
-            print("HERE")
             self.last_sprite_idx = getattr(self, "last_sprite_idx", -1)
             sprite_idx = (self.last_sprite_idx + 1) % len(self.portal_sprites)
             # update timestamps/markers 

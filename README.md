@@ -14,13 +14,8 @@ The demos showcase applying reinforcement learning (Q-Learning) to train a agent
 | Pong | Agent trained using Q-learning to play pong | `python Pong/Pong.py` |
 
 ## Setup
-### Bare Metal
+Requirements: Python >=3.6
 Setup:
-1. Install anaconda/miniconda
-2. Create conda env with packages `conda create --name overflow-oh-ai` 
-3. `conda activate overflow-oh-ai`
-4. Run the demos
-
-Additional setup for specific Demos:
-- Maze demo 
-    - `cd deps/gym-maze/ && python setup.py install`
+1. Install module requirements `pip3 install -r requirements.txt`
+2. Install `gym-maze` - `cd deps/gym-maze/ && python3 setup.py install`
+2. Run the demos
